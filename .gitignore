@@ -1,0 +1,24 @@
+# Backend
+backend/node_modules/
+backend/.env
+backend/firebase-service-account.json
+backend/logs/
+backend/*.log
+backend/*.log.*
+
+# Frontend (later)
+client/node_modules/
+client/.env
+client/src/firebase.js
+
+# Common
+*.log
+.DS_Store
+.env
+.env.*.local
+.idea/
+.vscode/
+dist/
+build/
+coverage/
+thirtyfour/
