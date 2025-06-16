@@ -1,19 +1,16 @@
 import React, { useState } from "react";
 import googleIcon from "../assets/Google.svg";
-import { auth, provider, signInWithPopup } from "../firebase";
+import { auth, provider, signInWithPopup } from "../config/firebase";
 import axios from "axios";
 
 const Login = () => {
   const handleGoogleLogin = async () => {
     try {
-      const googleResponse = await signInWithPopup(auth, provider);
-      console.log(googleResponse.user);
-      const token = await googleResponse.user.getIdToken();
-
-      // Send the token to your backend for verification and JWT generation
-      const apiResponse = await axios.post(
+      const googleResponse = await signInWithPopup(auth, provider); //open a popup for Google sign-in
+      const token = await googleResponse.user.getIdToken(); // Get the ID token from the Google response
+      console.log("obtained token: ", token); //need to remove before production
+      const apiResponse = await axios.get(
         `${import.meta.env.VITE_BASE_URL}/auth/google-oauth`,
-        { token },
         {
           headers: {
             Authorization: `Bearer ${token}`, // Pass the token in Authorization header
@@ -23,8 +20,7 @@ const Login = () => {
 
       if (apiResponse.data.success === true) {
         console.log("Login successful", apiResponse.data);
-        // Store the JWT token (e.g., in localStorage or cookies)
-        localStorage.setItem("token", apiResponse.data.token);
+        localStorage.setItem("chatly_auth_t", apiResponse.data.chatly_auth_tea);
       } else throw new Error("Login failed");
     } catch (err) {
       console.error("Google sign-in error", err);

@@ -10,6 +10,7 @@ backend/*.log.*
 client/node_modules/
 client/.env
 client/src/firebase.js
+client/src/config/firebase.js
 
 # Common
 *.log
