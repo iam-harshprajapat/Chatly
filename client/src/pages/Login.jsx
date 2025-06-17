@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import googleIcon from "../assets/Google.svg";
-import { auth, provider, signInWithPopup } from "../firebase";
+import { auth, provider, signInWithPopup } from "../config/firebase";
 import axios from "axios";
 
 const Login = () => {
