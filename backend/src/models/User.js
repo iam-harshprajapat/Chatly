@@ -1,29 +1,35 @@
 import mongoose from "mongoose";
 
-// Define the user schema
 const userSchema = new mongoose.Schema(
   {
     firebaseUID: {
       type: String,
       required: true,
       unique: true,
+      index: true,
     },
     email: {
       type: String,
       required: true,
       unique: true,
+      trim: true,
+      lowercase: true,
+      index: true,
     },
     phone: {
       type: String,
+      trim: true,
     },
     name: {
       type: String,
       required: true,
+      trim: true,
+      lowercase: true,
     },
     username: {
       type: String,
       unique: true,
-      sparse: true, // allow nulls
+      sparse: true, // allows nulls
     },
     avatar: {
       type: String,
@@ -32,19 +38,19 @@ const userSchema = new mongoose.Schema(
     },
     status: {
       type: String,
+      maxlength: 100,
       default: "Hey there! I’m using Chatly 🚀",
-    },
-    bio: {
-      type: String,
     },
     role: {
       type: String,
-      enum: ["user", "admin", "moderator"],
+      enum: ["user", "admin"],
       default: "user",
+      index: true,
     },
     lastSeen: {
       type: Date,
       default: Date.now,
+      index: true,
     },
     groups: [
       {
@@ -60,18 +66,18 @@ const userSchema = new mongoose.Schema(
     ],
     fcmToken: {
       type: String,
+      index: true,
     },
     notifications: {
       chat: { type: Boolean, default: true },
       mentions: { type: Boolean, default: true },
     },
   },
-  {
-    timestamps: true, // createdAt and updatedAt
-  }
+  { timestamps: true }
 );
 
-// Create the User model
-const User = mongoose.model("User", userSchema);
+// 🔍 For searching users quickly by role + activity
+userSchema.index({ role: 1, lastSeen: -1 });
 
+const User = mongoose.model("User", userSchema);
 export default User;
