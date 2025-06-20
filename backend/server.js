@@ -47,3 +47,6 @@ app.get("/", (req, res) => {
 //importing routes
 import authRoutes from "./src/routes/authRoute.js";
 app.use("/api/v1/auth", authRoutes);
+
+import searchRoutes from "./src/routes/searchRoute.js";
+app.use("/api/v1", searchRoutes);

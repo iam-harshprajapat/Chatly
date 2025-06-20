@@ -25,11 +25,13 @@ const userSchema = new mongoose.Schema(
       required: true,
       trim: true,
       lowercase: true,
+      index: true,
     },
     username: {
       type: String,
       unique: true,
       sparse: true, // allows nulls
+      index: true,
     },
     avatar: {
       type: String,
@@ -58,12 +60,6 @@ const userSchema = new mongoose.Schema(
         ref: "Group",
       },
     ],
-    blockedUsers: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-      },
-    ],
     fcmToken: {
       type: String,
       index: true,
@@ -78,6 +74,8 @@ const userSchema = new mongoose.Schema(
 
 // 🔍 For searching users quickly by role + activity
 userSchema.index({ role: 1, lastSeen: -1 });
+userSchema.index({ name: 1 });
+userSchema.index({ username: 1 });
 
 const User = mongoose.model("User", userSchema);
 export default User;
