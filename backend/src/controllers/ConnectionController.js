@@ -1,10 +1,15 @@
 import logger from "thirtyfour";
 import Connection from "../models/Connections.js";
 import User from "../models/user.js";
+import redis from "./../config/redisClient.js";
 
+//@desc Controller used to create new connection with state 'pending'
+//@route POST /api/v1/connection/request/:recipientId
+//@access private
 export const sentRequest = async (req, res) => {
   const { recipientId } = req.params;
   const requesterId = req.user.id;
+  const redisKey = `pending_connection:${recipientId}`;
   try {
     // 1. Check if recipient exists
     const recipient = await User.findById(recipientId);
@@ -44,7 +49,7 @@ export const sentRequest = async (req, res) => {
     });
 
     await connection.save();
-
+    await redis.del(redisKey);
     return res.status(201).json({
       success: true,
       message: "Connection request sent successfully!",
@@ -59,10 +64,13 @@ export const sentRequest = async (req, res) => {
   }
 };
 
+//@desc controller used to update connection state to 'accepted'
+//@route PATCH /api/v1/connection/accept/:requesterId
+//@access private
 export const acceptRequest = async (req, res) => {
   const { requesterId } = req.params;
   const recipientId = req.user.id;
-
+  const redisKey = `pending_connection:${recipientId}`;
   if (!requesterId) {
     return res.status(400).json({
       success: false,
@@ -88,7 +96,7 @@ export const acceptRequest = async (req, res) => {
     connection.status = "accepted";
     connection.acceptedAt = new Date();
     await connection.save();
-
+    await redis.del(redisKey);
     return res.status(200).json({
       success: true,
       message: "Connection request accepted successfully",
@@ -103,9 +111,13 @@ export const acceptRequest = async (req, res) => {
   }
 };
 
+//@desc controller used to delete the connection
+//@route DELETE /api/v1/connection/accept/:requesterId
+//@access private
 export const rejectRequest = async (req, res) => {
   const { requesterId } = req.params;
   const recipientId = req.user.id;
+  const redisKey = `pending_connection:${recipientId}`;
 
   if (!requesterId) {
     return res.status(400).json({
@@ -128,7 +140,7 @@ export const rejectRequest = async (req, res) => {
         message: "No pending request found",
       });
     }
-
+    await redis.del(redisKey);
     return res.status(200).json({
       success: true,
       message: "Connection request rejected successfully",
@@ -137,6 +149,127 @@ export const rejectRequest = async (req, res) => {
   } catch (error) {
     logger.error("Reject request error:", error);
     return res.status(500).json({
+      success: false,
+      message: "Something went wrong. Try again later.",
+    });
+  }
+};
+
+//@desc controller used to fetch all the connection whose state is 'pending'
+//@route GET /api/v1/connection/pending-connections
+//@access private
+export const getAllPendingRequest = async (req, res) => {
+  const userId = req.user.id;
+  try {
+    const redisKey = `pending_connection:${userId}`;
+
+    //1. Find in redis
+    const cached = await redis.get(redisKey);
+    if (cached) {
+      return res.status(200).send({
+        success: true,
+        cached: true,
+        message: "Requests fetched successfully",
+        pending_requests: JSON.parse(cached),
+      });
+    }
+
+    //2. Cache miss: find in Mongodb
+    const pending_requests = await Connection.find({
+      status: "pending",
+      recipient: userId,
+    })
+      .sort({ requestedAt: -1 })
+      .populate("requester", "name avatar username");
+    if (pending_requests.length <= 0) {
+      return res.status(200).send({
+        success: true,
+        message: "No pending requests",
+        pending_requests: [],
+      });
+    }
+    //3. Save in redis
+    await redis.setex(redisKey, 120, JSON.stringify(pending_requests));
+    return res.status(200).send({
+      success: true,
+      cached: false,
+      message: "Requests fetched successfully",
+      pending_requests: pending_requests,
+    });
+  } catch (error) {
+    logger.error(error);
+    return res.status(500).send({
+      success: false,
+      message: "something went wrong",
+    });
+  }
+};
+
+//@desc controller used to get all the connections for a user
+//@route GET /api/v1/connection/
+//@access private
+export const getAllConnections = async (req, res) => {
+  const userId = req.user.id;
+  const redisKey = `connections:${userId}`;
+
+  try {
+    // 1. Try Redis cache
+    const cached = await redis.get(redisKey);
+    if (cached) {
+      return res.status(200).send({
+        success: true,
+        message: "Connections fetched successfully",
+        cached: true,
+        connections: JSON.parse(cached),
+      });
+    }
+
+    // 2. Fetch from MongoDB
+    const connections = await Connection.find({
+      status: "accepted",
+      $or: [{ requester: userId }, { recipient: userId }],
+    })
+      .populate({
+        path: "requester",
+        select: "name avatar username",
+      })
+      .populate({
+        path: "recipient",
+        select: "name avatar username",
+      });
+
+    // 3. Transform to connected users only
+    const transformed = connections.map((conn) => {
+      const connectedUser =
+        conn.requester._id.toString() === userId
+          ? conn.recipient
+          : conn.requester;
+
+      return {
+        _id: connectedUser._id,
+        name: connectedUser.name,
+        avatar: connectedUser.avatar,
+        username: connectedUser.username,
+      };
+    });
+
+    // 4. Sort alphabetically by name (case-insensitive)
+    transformed.sort((a, b) =>
+      a.name.localeCompare(b.name, "en", { sensitivity: "base" })
+    );
+
+    // 5. Cache the result for 2 min
+    await redis.setex(redisKey, 120, JSON.stringify(transformed));
+
+    return res.status(200).send({
+      success: true,
+      message: "Connections fetched successfully",
+      cached: false,
+      connections: transformed,
+    });
+  } catch (error) {
+    logger.error("Get all connections error:", error);
+    return res.status(500).send({
       success: false,
       message: "Something went wrong. Try again later.",
     });

@@ -74,8 +74,6 @@ const userSchema = new mongoose.Schema(
 
 // 🔍 For searching users quickly by role + activity
 userSchema.index({ role: 1, lastSeen: -1 });
-userSchema.index({ name: 1 });
-userSchema.index({ username: 1 });
 
 const User = mongoose.model("User", userSchema);
 export default User;
