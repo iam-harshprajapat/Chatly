@@ -12,7 +12,7 @@ export const searchUsers = async (req, res) => {
       message: "Too short query. Requires query > 2",
     });
   }
-
+  logger.info("REQUEST: ", req.user);
   try {
     const redisKey = `search:${query}`;
 
@@ -35,7 +35,7 @@ export const searchUsers = async (req, res) => {
       ],
     })
       .limit(5)
-      .select("name username avatar firebaseUID");
+      .select("name username avatar id");
 
     // 3. Cache the results
     if (users.length > 0)
@@ -83,7 +83,7 @@ export const searchUsersPaginated = async (req, res) => {
     };
 
     const users = await User.find(searchFilter)
-      .select("firebaseUID name avatar")
+      .select("id name avatar")
       .skip(offset)
       .limit(limit);
     if (users.length > 0)

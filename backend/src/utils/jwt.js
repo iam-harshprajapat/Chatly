@@ -6,7 +6,7 @@ import jwt from "jsonwebtoken";
 
 const generateJWT = (user) => {
   return jwt.sign(
-    { uid: user.firebaseUID, email: user.email, name: user.name },
+    { id: user.id, email: user.email, name: user.name },
     process.env.JWT_SECRET,
     { expiresIn: "30d" }
   );

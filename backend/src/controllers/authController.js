@@ -27,7 +27,6 @@ const loginController = async (req, res) => {
       user.avatar = picture || default_profile;
       await user.save();
     }
-
     //token generation
     const token = generateJWT(user);
     logger.info(`A thread was created for user: ${user.email}`);
