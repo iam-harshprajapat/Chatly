@@ -72,7 +72,6 @@ const userSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// 🔍 For searching users quickly by role + activity
 userSchema.index({ role: 1, lastSeen: -1 });
 
 const User = mongoose.model("User", userSchema);

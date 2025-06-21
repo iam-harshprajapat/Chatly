@@ -1,9 +1,25 @@
-import handleConnection from "./connection.js";
+import { setUserOffline, setUserOnline } from "../utils/redisPresence.js";
+import { socketAuthMiddleware } from "./middleware/authSocket.js";
+import logger from "thirtyfour";
 
-const socketHandler = (io) => {
+export const initSocketIO = (io) => {
+  io.use(socketAuthMiddleware);
+
   io.on("connection", (socket) => {
-    handleConnection(io, socket); // pass io if you need broadcasting
+    logger.info("New Client Connected:", socket.id);
+
+    const userId = socket.user.id;
+    setUserOnline(userId);
+
+    // 🔁 Keep refreshing TTL every 30s
+    const refreshInterval = setInterval(() => {
+      setUserOnline(userId);
+    }, 30_000);
+
+    socket.on("disconnect", () => {
+      logger.info("Client disconnected:", socket.id);
+      clearInterval(refreshInterval);
+      setUserOffline(userId);
+    });
   });
 };
-
-export default socketHandler;

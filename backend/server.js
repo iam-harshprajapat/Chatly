@@ -6,7 +6,8 @@ import cors from "cors";
 import databaseConnection from "./src/config/databaseConnection.js";
 import { logRequest } from "thirtyfour";
 import logger from "thirtyfour";
-
+import { initSocketIO } from "./src/sockets/index.js";
+import { Server } from "socket.io";
 //express app
 const app = express();
 
@@ -15,7 +16,7 @@ app.use(express.json());
 app.use(
   cors({
     origin: process.env.CORS_ORIGIN,
-    methods: ["GET", "POST", "PUT", "DELETE"],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
     credentials: true,
     allowedHeaders: ["Content-Type", "Authorization"],
   })
@@ -35,6 +36,16 @@ server.listen(PORT, () => {
     `Server is running on http://localhost:${PORT} in ${process.env.ENVIRONMENT} mode...`
   );
 });
+
+//socket
+const io = new Server(server, {
+  cors: {
+    origin: process.env.CORS_ORIGIN,
+    methods: ["GET", "POST"],
+    credentials: true,
+  },
+});
+initSocketIO(io);
 
 //root route
 app.get("/", (req, res) => {
