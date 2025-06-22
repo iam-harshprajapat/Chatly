@@ -2,6 +2,7 @@ import logger from "thirtyfour";
 import Connection from "../models/Connections.js";
 import User from "../models/user.js";
 import redis from "./../config/redisClient.js";
+import { getConnectedFriends } from "../utils/getUserConnections.js";
 
 //@desc Controller used to create new connection with state 'pending'
 //@route POST /api/v1/connection/request/:recipientId
@@ -209,69 +210,17 @@ export const getAllPendingRequest = async (req, res) => {
 //@route GET /api/v1/connection/
 //@access private
 export const getAllConnections = async (req, res) => {
-  const userId = req.user.id;
-  const redisKey = `connections:${userId}`;
-
   try {
-    // 1. Try Redis cache
-    const cached = await redis.get(redisKey);
-    if (cached) {
-      return res.status(200).send({
-        success: true,
-        message: "Connections fetched successfully",
-        cached: true,
-        connections: JSON.parse(cached),
-      });
-    }
-
-    // 2. Fetch from MongoDB
-    const connections = await Connection.find({
-      status: "accepted",
-      $or: [{ requester: userId }, { recipient: userId }],
-    })
-      .populate({
-        path: "requester",
-        select: "name avatar username",
-      })
-      .populate({
-        path: "recipient",
-        select: "name avatar username",
-      });
-
-    // 3. Transform to connected users only
-    const transformed = connections.map((conn) => {
-      const connectedUser =
-        conn.requester._id.toString() === userId
-          ? conn.recipient
-          : conn.requester;
-
-      return {
-        _id: connectedUser._id,
-        name: connectedUser.name,
-        avatar: connectedUser.avatar,
-        username: connectedUser.username,
-      };
-    });
-
-    // 4. Sort alphabetically by name (case-insensitive)
-    transformed.sort((a, b) =>
-      a.name.localeCompare(b.name, "en", { sensitivity: "base" })
-    );
-
-    // 5. Cache the result for 2 min
-    await redis.setex(redisKey, 120, JSON.stringify(transformed));
-
+    const connections = await getConnectedFriends(req.user.id);
     return res.status(200).send({
       success: true,
       message: "Connections fetched successfully",
-      cached: false,
-      connections: transformed,
+      connections,
     });
   } catch (error) {
     logger.error("Get all connections error:", error);
-    return res.status(500).send({
-      success: false,
-      message: "Something went wrong. Try again later.",
-    });
+    return res
+      .status(500)
+      .send({ success: false, message: "Something went wrong" });
   }
 };
