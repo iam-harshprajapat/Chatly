@@ -8,11 +8,11 @@ export const searchUsers = async (req, res) => {
 
   if (!query || query.length < 3) {
     return res.status(400).send({
-      success: false,
+      success: true,
       message: "Too short query. Requires query > 2",
+      users: [],
     });
   }
-  logger.info("REQUEST: ", req.user);
   try {
     const redisKey = `search:${query}`;
 

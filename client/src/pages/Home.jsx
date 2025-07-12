@@ -6,7 +6,7 @@ import ChatBody from "../components/ChatBody";
 const Home = () => {
   return (
     <>
-      <div className="h-screen w-full">
+      <div className="h-screen w-full overscroll-contain">
         <NavBar />
         <div className="flex bg-background w-full h-[90%] border-t-[1px] border-secondary">
           <Sidebar />
