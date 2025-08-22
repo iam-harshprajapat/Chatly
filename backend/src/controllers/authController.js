@@ -1,6 +1,8 @@
 import logger from "thirtyfour";
 import User from "../models/user.js";
 import { generateJWT } from "../utils/jwt.js";
+import redis from "./../config/redisClient.js";
+import cloudinary from "../config/cloudinary.js";
 
 const loginController = async (req, res) => {
   const { uid, email, name, phone, picture } = req.user;
@@ -11,6 +13,9 @@ const loginController = async (req, res) => {
   try {
     let user = await User.findOne({ firebaseUID: uid });
     if (!user) {
+      if (picture) {
+        cloudinary.uploader.upload(picture);
+      }
       user = new User({
         firebaseUID: uid,
         email,
@@ -45,31 +50,73 @@ const loginController = async (req, res) => {
 
 const getUserController = async (req, res) => {
   const id = req.user.id;
+  console.log(id);
+  const redisKey = `user:${id}`;
   try {
-    const user = await User.findById({ _id: id });
-    if (!user) {
-      return res.status(404).send({
-        success: false,
-        message: "User not found",
+    const cached = await redis.get(redisKey);
+    if (cached) {
+      return res.status(200).send({
+        success: true,
+        message: "user fetched successfully",
+        user: JSON.parse(cached),
       });
     }
-    return res.status(200).send({
-      success: true,
-      user: {
-        firebaseUID: user.firebaseUID,
-        email: user.email,
-        name: user.name,
-        phone: user.phone,
-        avatar: user.avatar,
-      },
-    });
+    const user = await User.findById(id);
+    if (user) {
+      redis.setex(redisKey, 300, JSON.stringify(user));
+      return res.status(200).send({
+        success: true,
+        message: "user fetched successfully",
+        user,
+      });
+    } else {
+      return res.status(404).send({
+        success: false,
+        message: "user not found",
+      });
+    }
   } catch (error) {
-    logger.error(`Error fetching user: ${error.message}`);
+    logger.error(error);
     return res.status(500).send({
       success: false,
-      message: "Error fetching user",
+      message: "internal server error",
     });
   }
 };
 
-export { loginController, getUserController };
+const findUserById = async (req, res) => {
+  const { userId } = req.params;
+  const redisKey = `user:${userId}`;
+  try {
+    const cached = await redis.get(redisKey);
+    if (cached) {
+      return res.status(200).send({
+        success: true,
+        message: "user fetched successfully",
+        user: JSON.parse(cached),
+      });
+    }
+    const user = await User.findById(userId);
+    if (user) {
+      redis.setex(redisKey, 300, JSON.stringify(user));
+      return res.status(200).send({
+        success: true,
+        message: "user fetched successfully",
+        user,
+      });
+    } else {
+      return res.status(404).send({
+        success: false,
+        message: "user not found",
+      });
+    }
+  } catch (error) {
+    logger.error(error);
+    return res.status(500).send({
+      success: false,
+      message: "internal server error",
+    });
+  }
+};
+
+export { loginController, getUserController, findUserById };

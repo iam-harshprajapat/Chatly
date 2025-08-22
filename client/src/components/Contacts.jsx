@@ -10,7 +10,7 @@ const Contacts = () => {
       {connection.map((connection, idx) => (
         <div
           key={idx}
-          className="h-18 hover:bg-secondary px-4 flex items-center gap-4 "
+          className="h-18 hover:bg-secondary px-4 flex items-center gap-4 duration-200"
         >
           <div className="h-10 w-10 bg-white rounded-full"></div>
           <div>

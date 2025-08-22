@@ -1,5 +1,5 @@
 const ChatBody = () => {
-  return <h1 className="text-font text-center">Chat</h1>;
+  return <div className="text-font text-center flex-1">Chat</div>;
 };
 
 export default ChatBody;

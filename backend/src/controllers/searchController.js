@@ -8,7 +8,7 @@ export const searchUsers = async (req, res) => {
 
   if (!query || query.length < 3) {
     return res.status(400).send({
-      success: true,
+      success: false,
       message: "Too short query. Requires query > 2",
       users: [],
     });
